@@ -1,26 +1,26 @@
 // Para publicar uma nova versão: edite os arquivos, aumente o número abaixo e faça o push.
-const CACHE = "caderno-al-v1";
+const CACHE = "caderno-al-v2";
 const ASSETS = [
   "./",
   "index.html",
   "manifest.webmanifest",
-  "vendor/jspdf.umd.min.js",
-  "fonts/manrope-latin-wght-normal.woff2",
-  "fonts/newsreader-latin-wght-normal.woff2",
-  "icons/icon-192.png",
-  "icons/icon-512.png",
-  "icons/maskable-512.png",
-  "icons/apple-touch-icon.png",
-  "img/j1.jpg",
-  "img/j2.jpg",
-  "img/j3.jpg",
-  "img/j4.jpg",
-  "img/b1.jpg",
-  "img/b2.jpg",
-  "img/b3.jpg",
-  "img/r1.jpg",
-  "img/r2.jpg",
-  "img/r3.jpg"
+  "jspdf.umd.min.js",
+  "manrope-latin-wght-normal.woff2",
+  "newsreader-latin-wght-normal.woff2",
+  "icon-192.png",
+  "icon-512.png",
+  "maskable-512.png",
+  "apple-touch-icon.png",
+  "j1.jpg",
+  "j2.jpg",
+  "j3.jpg",
+  "j4.jpg",
+  "b1.jpg",
+  "b2.jpg",
+  "b3.jpg",
+  "r1.jpg",
+  "r2.jpg",
+  "r3.jpg"
 ];
 
 self.addEventListener("install", (e) => {

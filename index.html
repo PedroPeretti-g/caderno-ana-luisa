@@ -13,11 +13,11 @@
 <meta name="apple-mobile-web-app-title" content="Caderno AL">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" type="image/png" href="icons/icon-192.png">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>
-@font-face{font-family:'Manrope';src:url(fonts/manrope-latin-wght-normal.woff2) format('woff2');font-weight:200 800;font-style:normal;font-display:swap}
-@font-face{font-family:'Newsreader';src:url(fonts/newsreader-latin-wght-normal.woff2) format('woff2');font-weight:200 800;font-style:normal;font-display:swap}
+@font-face{font-family:'Manrope';src:url(manrope-latin-wght-normal.woff2) format('woff2');font-weight:200 800;font-style:normal;font-display:swap}
+@font-face{font-family:'Newsreader';src:url(newsreader-latin-wght-normal.woff2) format('woff2');font-weight:200 800;font-style:normal;font-display:swap}
 /* Direção: aplicativo de celular, calmo e editorial. Papel creme, tinta ameixa, títulos em serifa fina, topo em arco (a forma da arquitetura), barra de navegação flutuante. */
 :root{
   --paper:#faf5ef;
@@ -199,7 +199,7 @@ canvas.ann{display:block;width:100%;height:auto;touch-action:none;border-radius:
 .rline{font-size:13px;padding:4px 0;line-height:1.5}
 @media(prefers-reduced-motion:reduce){*,*:after{animation:none!important;transition:none!important}}
 </style>
-<script src="vendor/jspdf.umd.min.js"></script>
+<script src="jspdf.umd.min.js"></script>
 </head>
 <body>
 <div class="app" id="app">
@@ -280,7 +280,7 @@ function stNome(k){for(var i=0;i<STATUS.length;i++)if(STATUS[i][0]===k)return ST
 var ETAPAS_PADRAO=[['Estudo preliminar',15,24],['Anteprojeto',25,40],['Projeto executivo',30,70],['Detalhamentos',15,30],['Acompanhamento de obra',15,45]];
 
 /* ---------- dados de demonstração (relativos a hoje) ---------- */
-var IMG={j1:'img/j1.jpg',j2:'img/j2.jpg',j3:'img/j3.jpg',j4:'img/j4.jpg',b1:'img/b1.jpg',b2:'img/b2.jpg',b3:'img/b3.jpg',r1:'img/r1.jpg',r2:'img/r2.jpg',r3:'img/r3.jpg'};
+var IMG={j1:'j1.jpg',j2:'j2.jpg',j3:'j3.jpg',j4:'j4.jpg',b1:'b1.jpg',b2:'b2.jpg',b3:'b3.jpg',r1:'r1.jpg',r2:'r2.jpg',r3:'r3.jpg'};
 function buildSeed(){
   var t=Date.now();
   function ago(hr){return new Date(t-hr*3600e3).toISOString()}

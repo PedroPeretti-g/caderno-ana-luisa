@@ -13,7 +13,7 @@ Os dados são fictícios. Tudo o que você altera fica salvo só no aparelho em 
 ## Como atualizar
 
 1. Edite os arquivos (por exemplo `index.html`).
-2. Em `sw.js`, aumente o número da constante `CACHE` (de `caderno-al-v1` para `caderno-al-v2`, e assim por diante).
+2. Em `sw.js`, aumente o número da constante `CACHE` (de `caderno-al-v2` para `caderno-al-v3`, e assim por diante).
 3. Faça commit e push na `main`. O GitHub Pages publica em um ou dois minutos.
 4. Nos aparelhos, o app atualiza na abertura seguinte à publicação (às vezes na segunda abertura).
 
@@ -27,9 +27,14 @@ Todos os caminhos são relativos, então funciona em subpasta.
 
 ## Estrutura
 
+Todos os arquivos ficam na mesma pasta (a raiz do repositório):
+
 - `index.html`: o app inteiro.
 - `manifest.webmanifest` e `sw.js`: instalação e modo sem internet.
-- `icons/`, `fonts/`, `img/`, `vendor/`: ícones, fontes, ilustrações de exemplo e a biblioteca de PDF, todos locais.
+- `icon-192.png`, `icon-512.png`, `maskable-512.png`, `apple-touch-icon.png`: ícones.
+- `manrope-latin-wght-normal.woff2` e `newsreader-latin-wght-normal.woff2`: fontes locais.
+- `b1.jpg` a `r3.jpg`: ilustrações de exemplo.
+- `jspdf.umd.min.js`: biblioteca de PDF.
 
 ## Créditos e licenças
 
