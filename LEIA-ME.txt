@@ -1,0 +1,19 @@
+CADERNO ANA LUISA PERETTI (DEMO) - COMO PUBLICAR
+
+Esta versão NÃO tem as fotos da arquiteta (usa ilustrações), então pode ir para um repositório público.
+
+CAMINHO 1: um comando (precisa do GitHub CLI "gh" instalado e logado)
+  1. Descompacte o zip.
+  2. No terminal, dentro da pasta descompactada: bash publicar.sh
+  3. Em 1 a 2 minutos o app abre em https://pedroperetti-g.github.io/caderno-ana-luisa/
+
+CAMINHO 2: pelo site do GitHub (sem terminal)
+  1. github.com > New repository > nome: caderno-ana-luisa > Public > Create.
+  2. Clique em "uploading an existing file" e arraste TODO o conteúdo da pasta "caderno-ana-luisa-app"
+     (index.html, manifest.webmanifest, sw.js, icons, fonts, img, vendor, README.md). Commit.
+  3. Settings > Pages > Source: Deploy from a branch > main > / (root) > Save.
+  4. Em 1 a 2 minutos o app abre em https://pedroperetti-g.github.io/caderno-ana-luisa/
+
+DEPOIS DE PUBLICAR
+  - Android (Chrome): menu ⋮ > Instalar app.  iPhone (Safari): Compartilhar > Adicionar à Tela de Início.
+  - Para atualizar: edite os arquivos, aumente o número de CACHE em sw.js (caderno-al-v1 -> caderno-al-v2) e envie de novo.
