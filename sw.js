@@ -1,5 +1,5 @@
 // Para publicar uma nova versão: edite os arquivos, aumente o número abaixo e faça o push.
-const CACHE = "caderno-al-v3";
+const CACHE = "caderno-al-v4";
 const ASSETS = [
   "./",
   "index.html",
