@@ -594,6 +594,36 @@ function novaOrdem(opts){
   close=openModal('Nova ordem',form);
 }
 
+/* ---------- novo projeto ---------- */
+var TIPOS_PROJ=['Apartamento','Casa','Cobertura','Ambiente','Comercial','Outro'];
+function novoProjeto(){
+  var f={nome:'',tipo:'Apartamento',cliente:'',local:'',area:'',m2:'',meta:'120'};
+  var inN=h('input',{required:true,placeholder:'Ex.: Casa Itanhangá',oninput:function(){f.nome=inN.value}});
+  var selT=h('select',{'aria-label':'Tipo',onchange:function(){f.tipo=selT.value}});
+  TIPOS_PROJ.forEach(function(t){selT.appendChild(h('option',{value:t,text:t}))});selT.value=f.tipo;
+  function num(l,key,step,ph){var i=h('input',{type:'number',inputmode:'decimal',min:'0',step:step,placeholder:ph||'',value:f[key],oninput:function(){f[key]=i.value}});return h('label',{class:'field'},l,i)}
+  var form=h('form',{class:'fgrid',onsubmit:function(ev){ev.preventDefault();salvar()}},
+    h('label',{class:'field full'},'Nome do projeto',inN),
+    h('label',{class:'field full'},'Tipo',selT),
+    h('label',{class:'field'},'Cliente',h('input',{oninput:function(ev){f.cliente=ev.target.value}})),
+    h('label',{class:'field'},'Local',h('input',{placeholder:'Bairro, cidade',oninput:function(ev){f.local=ev.target.value}})),
+    num('Área (m²)','area','1','0'),num('Valor (R$/m²)','m2','5','0'),
+    num('Meta (R$/h)','meta','5','120'),
+    h('p',{class:'micro muted',style:'grid-column:1/-1',text:'O projeto já nasce com as cinco etapas padrão (a fazer). Área, valores, ambientes e fotos podem ser preenchidos depois, na tela do projeto.'}),
+    h('button',{class:'primary',type:'submit',style:'grid-column:1/-1',text:'Criar projeto'}));
+  var close;
+  function salvar(){
+    if(!f.nome.trim()){inN.focus();return}
+    var id=newId('p'),area=parseFloat(f.area),m2=parseFloat(f.m2),meta=parseFloat(f.meta);
+    S.projs[id]={nome:f.nome.trim(),tipo:f.tipo,cliente:f.cliente.trim(),local:f.local.trim(),
+      area:isNaN(area)||area<0?0:area,hon:{m2:isNaN(m2)||m2<0?0:m2,meta:isNaN(meta)||meta<0?0:meta},
+      etapas:ETAPAS_PADRAO.map(function(e){return {n:e[0],pct:e[1],h:e[2],st:'A fazer'}}),
+      capa:null,fotos:[],programa:[],criadoEm:nowIso()};
+    saveProj(id,true);close();go('projeto',id);toast('Projeto criado');
+  }
+  close=openModal('Novo projeto',form);
+}
+
 /* ---------- tela: ordem ---------- */
 function viewOrdem(){
   var id=S.id,o=S.ordens[id];
@@ -863,7 +893,9 @@ function viewProjetos(){
   var f=h('div',{class:'content'}),ks=Object.keys(S.projs);
   f.appendChild(h('h1',{},'Seus',h('br'),'projetos.'));
   f.appendChild(h('p',{class:'small muted mt8',text:'Etapas, programa de necessidades e honorários de cada projeto.'}));
+  f.appendChild(h('button',{class:'primary mt16',type:'button',onclick:function(){novoProjeto()}},icon('plus',18),'Novo projeto'));
   if(!S.ready)f.appendChild(h('div',{class:'empty',text:'Carregando…'}));
+  else if(!ks.length)f.appendChild(h('div',{class:'empty',text:'Nenhum projeto ainda. Toque em Novo projeto para começar.'}));
   ks.forEach(function(k){var p=S.projs[k],pc=avanco(p),n=lista().filter(function(o){return o.proj===k&&aberta(o)}).length;
     f.appendChild(h('button',{class:'proj',type:'button',onclick:function(){go('projeto',k)}},
       coverSrc(p)?h('img',{class:'cover',src:coverSrc(p),alt:'Foto de capa de '+p.nome,loading:'lazy'}):null,
@@ -926,6 +958,15 @@ function viewProjeto(){
     var a=$('p-pc');if(a)a.textContent=avanco(p)+'%';var e=$('p-et');if(e)e.textContent=etapaAtual(p);
   }
   upd();
+  // excluir projeto
+  var nOrd=lista().filter(function(o){return o.proj===id}).length;
+  f.appendChild(h('p',{class:'micro muted mt16',text:'Excluir apaga o projeto, as etapas, o programa e as fotos dele.'+(nOrd?' As '+nOrd+(nOrd===1?' ordem ligada':' ordens ligadas')+' a ele continuam na agenda, sem projeto.':'')}));
+  var arm=false,del=h('button',{class:'textbtn danger',type:'button',style:'width:100%;margin-top:4px',text:'Excluir projeto',onclick:function(){
+    if(!arm){arm=true;del.textContent='Toque de novo para confirmar';del.classList.add('armed');setTimeout(function(){arm=false;del.textContent='Excluir projeto';del.classList.remove('armed')},4000);return}
+    lista().forEach(function(o){if(o.proj===id){o.proj=null;logH(o,'Projeto "'+p.nome+'" excluído; ordem ficou sem projeto');saveOrdem(o.__id,true)}});
+    (p.fotos||[]).forEach(function(ft){if(ft&&ft.b){idbDel(ft.b);delete BURL[ft.b]}});
+    delete S.projs[id];removeDoc('projetos/'+id);localSave();go('projetos');toast('Projeto excluído')}});
+  f.appendChild(del);
   return f;
 }
 
