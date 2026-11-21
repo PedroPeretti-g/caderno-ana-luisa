@@ -933,9 +933,9 @@ function viewRelatorio(){
   return f;
 }
 async function imgForPdf(f,mx){var im=await loadImg(fotoSrc(f)),s=Math.min(1,(mx||1400)/Math.max(im.naturalWidth,im.naturalHeight));var c=document.createElement('canvas');c.width=Math.round(im.naturalWidth*s);c.height=Math.round(im.naturalHeight*s);var x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(im,0,0,c.width,c.height);return {u:c.toDataURL('image/jpeg',0.82),w:c.width,h:c.height}}
-async function entregarArquivo(nome,blob){
+async function entregarArquivo(nome,blob,tipo){
   if(CAP.downloads){await CAP.downloads.save({filename:nome,data:blob});return}
-  var file=null;try{file=new File([blob],nome,{type:'application/pdf'})}catch(e){}
+  var file=null;try{file=new File([blob],nome,{type:tipo||'application/pdf'})}catch(e){}
   if(file&&navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file],title:nome});return}catch(e){if(e&&e.name==='AbortError')return}}
   var url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=nome;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url)},60000);
 }
@@ -1204,6 +1204,85 @@ function viewProjeto(){
   return f;
 }
 
+/* ---------- backup (arquivo .zip sem compressão) ---------- */
+var CRCT=null;
+function crcTable(){if(CRCT)return CRCT;CRCT=new Uint32Array(256);for(var n=0;n<256;n++){var c=n;for(var k=0;k<8;k++)c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1);CRCT[n]=c>>>0}return CRCT}
+async function crcBlob(blob){var t=crcTable(),c=0xFFFFFFFF,CH=4*1024*1024;for(var o=0;o<blob.size;o+=CH){var u=new Uint8Array(await blob.slice(o,o+CH).arrayBuffer());for(var i=0;i<u.length;i++)c=t[(c^u[i])&255]^(c>>>8)}return (c^0xFFFFFFFF)>>>0}
+function zipDT(){var n=new Date();return {t:(n.getHours()<<11)|(n.getMinutes()<<5)|(n.getSeconds()>>1),d:((n.getFullYear()-1980)<<9)|((n.getMonth()+1)<<5)|n.getDate()}}
+function zipLocal(nl,size,crc,dt){var b=new ArrayBuffer(30),v=new DataView(b);v.setUint32(0,0x04034b50,true);v.setUint16(4,20,true);v.setUint16(6,0x0800,true);v.setUint16(8,0,true);v.setUint16(10,dt.t,true);v.setUint16(12,dt.d,true);v.setUint32(14,crc,true);v.setUint32(18,size,true);v.setUint32(22,size,true);v.setUint16(26,nl,true);v.setUint16(28,0,true);return b}
+function zipCentral(nl,size,crc,dt,off){var b=new ArrayBuffer(46),v=new DataView(b);v.setUint32(0,0x02014b50,true);v.setUint16(4,20,true);v.setUint16(6,20,true);v.setUint16(8,0x0800,true);v.setUint16(10,0,true);v.setUint16(12,dt.t,true);v.setUint16(14,dt.d,true);v.setUint32(16,crc,true);v.setUint32(20,size,true);v.setUint32(24,size,true);v.setUint16(28,nl,true);v.setUint32(42,off,true);return b}
+function zipEnd(n,size,off){var b=new ArrayBuffer(22),v=new DataView(b);v.setUint32(0,0x06054b50,true);v.setUint16(8,n,true);v.setUint16(10,n,true);v.setUint32(12,size,true);v.setUint32(16,off,true);return b}
+async function zipBuild(files){
+  var parts=[],cds=[],off=0,dt=zipDT(),enc=new TextEncoder();
+  for(var i=0;i<files.length;i++){
+    var f=files[i],nb=enc.encode(f.nome),crc=await crcBlob(f.blob);
+    if(off+f.blob.size>4000000000)throw erro('grande');
+    parts.push(zipLocal(nb.length,f.blob.size,crc,dt),nb,f.blob);
+    cds.push({h:zipCentral(nb.length,f.blob.size,crc,dt,off),n:nb});
+    off+=30+nb.length+f.blob.size;
+  }
+  var cdSize=0;cds.forEach(function(c){parts.push(c.h,c.n);cdSize+=46+c.n.length});
+  parts.push(zipEnd(files.length,cdSize,off));
+  return new Blob(parts,{type:'application/zip'});
+}
+async function zipRead(file){
+  var n=file.size;if(n<22)throw erro('invalido');
+  var tail=new DataView(await file.slice(Math.max(0,n-65557),n).arrayBuffer()),e=-1;
+  for(var i=tail.byteLength-22;i>=0;i--){if(tail.getUint32(i,true)===0x06054b50){e=i;break}}
+  if(e<0)throw erro('invalido');
+  var total=tail.getUint16(e+10,true),cdSize=tail.getUint32(e+12,true),cdOff=tail.getUint32(e+16,true);
+  var cd=new DataView(await file.slice(cdOff,cdOff+cdSize).arrayBuffer()),dec=new TextDecoder(),p=0,out={};
+  for(var k=0;k<total;k++){
+    if(cd.getUint32(p,true)!==0x02014b50||cd.getUint16(p+10,true)!==0)throw erro('invalido');
+    var size=cd.getUint32(p+24,true),nl=cd.getUint16(p+28,true),xl=cd.getUint16(p+30,true),cl=cd.getUint16(p+32,true),lo=cd.getUint32(p+42,true);
+    var name=dec.decode(new Uint8Array(cd.buffer,p+46,nl));
+    var lh=new DataView(await file.slice(lo,lo+30).arrayBuffer()),st=lo+30+lh.getUint16(26,true)+lh.getUint16(28,true);
+    out[name]=file.slice(st,st+size);
+    p+=46+nl+xl+cl;
+  }
+  return out;
+}
+async function idbTodos(){var db=await idb(),out=[];if(!db)return out;await new Promise(function(res){var tx=db.transaction('fotos','readonly'),rq=tx.objectStore('fotos').openCursor();rq.onsuccess=function(){var c=rq.result;if(c){out.push({id:c.key,blob:c.value});c.continue()}else res()};rq.onerror=function(){res()}});return out}
+function extDe(t){return ({'image/jpeg':'jpg','image/png':'png','image/webp':'webp','video/mp4':'mp4','video/quicktime':'mov','video/webm':'webm'})[t]||'bin'}
+async function salvarBackup(){
+  toast('Preparando o backup…');
+  try{
+    var midias=await idbTodos(),mapa={},files=[];
+    midias.forEach(function(m){var nome='midia/'+m.id+'.'+extDe(m.blob.type);mapa[m.id]={arq:nome,tipo:m.blob.type||''};files.push({nome:nome,blob:m.blob})});
+    var dados={app:'caderno-ana-luisa',versao:1,criado:nowIso(),ordens:S.ordens,projs:S.projs,midias:mapa};
+    files.unshift({nome:'dados.json',blob:new Blob([JSON.stringify(dados)],{type:'application/json'})});
+    var blob=await zipBuild(files);
+    await entregarArquivo('caderno-ana-luisa-backup-'+hoje()+'.zip',blob,'application/zip');
+    toast('Backup pronto ('+fmt(blob.size/1048576,1)+' MB). Guarde o arquivo em um lugar seguro.');
+  }catch(e){toast('Não foi possível gerar o backup.',true)}
+}
+async function restaurarBackup(file){
+  try{
+    var z=await zipRead(file);
+    if(!z['dados.json'])throw erro('invalido');
+    var d=JSON.parse(await z['dados.json'].text());
+    if(!d||d.app!=='caderno-ana-luisa'||!d.ordens||!d.projs)throw erro('invalido');
+    var mid=d.midias||{},ids=Object.keys(mid);
+    for(var i=0;i<ids.length;i++){if(!z[mid[ids[i]].arq])throw erro('incompleto')}
+    var quando=d.criado?fmtDT(d.criado):'';
+    if(!window.confirm('Restaurar o backup'+(quando?' de '+quando:'')+'?\n\n'+Object.keys(d.ordens).length+' ordens, '+Object.keys(d.projs).length+' projetos e '+ids.length+' fotos e vídeos.\n\nIsso substitui os dados que estão neste aparelho agora.'))return;
+    toast('Restaurando…');
+    var antes=await idbTodos();
+    for(var j=0;j<ids.length;j++){
+      var m=mid[ids[j]],part=z[m.arq],b=part.slice(0,part.size,m.tipo||'application/octet-stream');
+      if(!(await idbPut(ids[j],b)))throw erro('espaco');
+      if(BURL[ids[j]]){try{URL.revokeObjectURL(BURL[ids[j]])}catch(e){}}
+      BURL[ids[j]]=URL.createObjectURL(b);
+    }
+    for(var q=0;q<antes.length;q++){var id=antes[q].id;if(!mid[id]){await idbDel(id);if(BURL[id]){try{URL.revokeObjectURL(BURL[id])}catch(e){}delete BURL[id]}}}
+    S.ordens=d.ordens;S.projs=d.projs;S.dia=hoje();localSave();render();
+    toast('Backup restaurado');
+  }catch(e){
+    var c=e&&e.code;
+    toast(c==='invalido'?'Esse arquivo não é um backup do Caderno.':c==='incompleto'?'O backup está incompleto ou corrompido.':c==='espaco'?'Sem espaço no aparelho para restaurar o backup.':'Não foi possível restaurar o backup.',true);
+  }
+}
+
 /* ---------- escritório ---------- */
 function viewEscritorio(){
   var f=h('div',{class:'content'});
@@ -1219,6 +1298,15 @@ function viewEscritorio(){
   f.appendChild(li);f.appendChild(h('p',{class:'micro muted mt8',text:'Cada tipo de ordem nasce com a lista do tipo. Você ajusta os itens em cada ordem.'}));
   f.appendChild(h('div',{class:'sectionhead'},h('h2',{text:'Sobre esta demonstração'})));
   f.appendChild(h('div',{class:'note'},h('span',{text:'Os nomes dos projetos vêm do portfólio público do escritório. As imagens são ilustrações de exemplo. Clientes, datas, horários, listas e honorários são fictícios, só para mostrar como o caderno funciona no dia a dia.'})));
+  if(S.demo){
+    f.appendChild(h('div',{class:'sectionhead'},h('h2',{text:'Backup dos dados'})));
+    var bk=h('div',{class:'card'}),fin=h('input',{type:'file',style:'display:none','aria-label':'Escolher arquivo de backup',onchange:function(){var fl=fin.files&&fin.files[0];fin.value='';if(fl)restaurarBackup(fl)}});
+    bk.appendChild(h('p',{class:'small',text:'Guarda tudo em um arquivo: ordens, projetos, fotos e vídeos. Salve esse arquivo em Arquivos ou envie para você mesma antes de reinstalar o app ou trocar de aparelho.'}));
+    bk.appendChild(h('button',{class:'primary mt16',type:'button',onclick:salvarBackup},icon('file',18),'Salvar backup'));
+    bk.appendChild(h('button',{class:'secondary mt8',type:'button',onclick:function(){fin.click()},text:'Restaurar backup'}));
+    bk.appendChild(fin);
+    f.appendChild(bk);
+  }
   f.appendChild(h('div',{class:'sectionhead'},h('h2',{text:'Créditos e licenças'})));
   var cr=h('div',{class:'card'});
   [['Demonstração','Criada por Pedro Peretti.'],['Imagens de exemplo','Ilustrações genéricas criadas para esta demonstração. Nenhuma foto do escritório está incluída.'],
