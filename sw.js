@@ -1,5 +1,5 @@
 // Para publicar uma nova versão: edite os arquivos, aumente o número abaixo e faça o push.
-const CACHE = "caderno-al-v5";
+const CACHE = "caderno-al-v6";
 const ASSETS = [
   "./",
   "index.html",
@@ -11,6 +11,7 @@ const ASSETS = [
   "icon-512.png",
   "maskable-512.png",
   "apple-touch-icon.png",
+  "logo-ana-luisa.png",
   "j1.jpg",
   "j2.jpg",
   "j3.jpg",
