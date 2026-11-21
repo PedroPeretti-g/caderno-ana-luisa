@@ -1342,7 +1342,11 @@ async function boot(){
   if(CAP.db)await startDb();else startDemo(null);
 }
 boot();
-if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('./sw.js').catch(function(){})})}
+if('serviceWorker' in navigator){
+  var tinhaSW=!!navigator.serviceWorker.controller,recarregou=false;
+  navigator.serviceWorker.addEventListener('controllerchange',function(){if(!tinhaSW||recarregou)return;recarregou=true;location.reload()});
+  window.addEventListener('load',function(){navigator.serviceWorker.register('./sw.js').then(function(r){try{r.update()}catch(e){}}).catch(function(){})});
+}
 })();
 </script>
 </body>
