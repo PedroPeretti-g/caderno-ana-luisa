@@ -1,10 +1,13 @@
 // Para publicar uma nova versão: edite os arquivos, aumente o número abaixo e faça o push.
-const CACHE = "caderno-al-v9";
+const CACHE = "caderno-al-v10";
 const ASSETS = [
   "./",
   "index.html",
   "manifest.webmanifest",
   "jspdf.umd.min.js",
+  "config.js",
+  "nuvem.js",
+  "supabase.js",
   "manrope-latin-wght-normal.woff2",
   "newsreader-latin-wght-normal.woff2",
   "icon-192.png",
@@ -46,6 +49,14 @@ self.addEventListener("activate", (e) => {
 self.addEventListener("fetch", (e) => {
   const req = e.request;
   if (req.method !== "GET") return;
+  const url = new URL(req.url);
+  // Servidor de dados (Supabase) e qualquer outro endereço: nunca passam pelo cache do app.
+  if (url.origin !== self.location.origin) return;
+  // A configuração vem sempre da rede quando há internet (para não ficar presa em versão velha).
+  if (url.pathname.endsWith("/config.js")) {
+    e.respondWith(fetch(new Request(req, { cache: "no-cache" })).catch(() => caches.match(req, { ignoreSearch: true })));
+    return;
+  }
   e.respondWith(
     caches.match(req, { ignoreSearch: true }).then((hit) => {
       if (hit) return hit;

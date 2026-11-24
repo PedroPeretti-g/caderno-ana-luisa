@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Caderno Ana Luisa Peretti (demo)</title>
+<title>Caderno Ana Luisa Peretti</title>
 <meta name="author" content="Pedro Peretti">
-<meta name="description" content="Demonstração de um caderno de agenda, fotos e relatórios de obra para escritório de arquitetura.">
+<meta name="description" content="Caderno de agenda, fotos e relatórios de obra do escritório Ana Luisa Peretti Arquitetura.">
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#faf5ef">
 <meta name="mobile-web-app-capable" content="yes">
@@ -253,6 +253,8 @@ canvas.ann{display:block;width:100%;height:auto;touch-action:none;border-radius:
 })();
 </script>
 
+<script src="config.js"></script>
+<script src="nuvem.js"></script>
 <script>
 (function(){
 'use strict';
@@ -369,6 +371,7 @@ function buildSeed(){
 var S={ordens:{},projs:{},ready:false,ro:false,demo:false,slow:false,view:'hoje',id:null,dia:hoje(),mes:null,modo:'dia',uploading:null,last:null};
 var d0=new Date();S.mes={y:d0.getFullYear(),m:d0.getMonth()};
 var CAP={db:null,assets:null,downloads:null,user:null};
+function REAL(){return !!(window.nuvem&&window.nuvem.ativa)}
 var BURL={},IDBP=null,IDBOK=false;
 function idb(){if(IDBP)return IDBP;IDBP=new Promise(function(res){try{var rq=indexedDB.open('caderno-al',1);rq.onupgradeneeded=function(){rq.result.createObjectStore('fotos')};rq.onsuccess=function(){res(rq.result)};rq.onerror=function(){res(null)}}catch(e){res(null)}});return IDBP}
 async function idbPut(id,blob){var db=await idb();if(!db)return false;return new Promise(function(res){var tx=db.transaction('fotos','readwrite');tx.objectStore('fotos').put(blob,id);tx.oncomplete=function(){res(true)};tx.onerror=function(){res(false)};tx.onabort=function(){res(false)}})}
@@ -429,7 +432,7 @@ async function seedDb(){
   S.seeding=false;
 }
 async function startDb(){
-  if(S.ro){
+  if(S.ro&&!REAL()){
     try{
       var a=await CAP.db.collection('ordens').get(),b=await CAP.db.collection('projetos').get(),o={},p={};
       a.docs.forEach(function(d){o[d.id]=clone(d.data())});b.docs.forEach(function(d){p[d.id]=clone(d.data())});
@@ -437,7 +440,7 @@ async function startDb(){
     }catch(e){startDemo(null)}
     return;
   }
-  var seeded=false;try{var m=await CAP.db.doc('meta/demo').get();seeded=m.exists}catch(e){}
+  var seeded=REAL();if(!seeded){try{var m=await CAP.db.doc('meta/demo').get();seeded=m.exists}catch(e){}}
   var okO=false,okP=false;
   function ready(){
     if(!(okO&&okP)||S.ready)return;
@@ -446,7 +449,7 @@ async function startDb(){
     setSync('ok');render();
   }
   var timer=setTimeout(function(){if(!S.ready){S.slow=true;render()}},10000);
-  function fail(){clearTimeout(timer);setSync('err','Sem acesso aos dados');startDemo(null)}
+  function fail(){clearTimeout(timer);setSync('err','Sem acesso aos dados');if(REAL()){toast('Não foi possível carregar os dados. Verifique a internet.',true);return}startDemo(null)}
   CAP.db.collection('ordens').onSnapshot(function(snap){
     if(S.demo||S.seeding)return;
     var m={},ch=false;snap.docs.forEach(function(d){var cur=S.ordens[d.id];
@@ -530,10 +533,10 @@ function viewHoje(){
   var prox=hojeL[0]||ab.filter(function(o){return dateOf(o)>hj}).sort(cmp)[0];
   var d=new Date();
   var f=h('div',{class:'content'});
-  if(!S.ready){f.appendChild(h('h1',{},saudacao()+',',h('br'),'Ana Luisa.'));f.appendChild(h('div',{class:'empty',text:'Carregando sua agenda…'}));return f}
+  if(!S.ready){f.appendChild(h('h1',{},saudacao()+',',h('br'),(REAL()&&nuvem.nome?nuvem.nome.split(' ')[0]:'Ana Luisa')+'.'));f.appendChild(h('div',{class:'empty',text:'Carregando sua agenda…'}));return f}
   if(S.demo)f.appendChild(h('div',{class:'note',style:'margin-bottom:16px'},h('span',{text:'Demonstração com dados fictícios, montada para o escritório Ana Luisa Peretti Arquitetura. Pode mexer à vontade: o que você alterar fica só neste aparelho.'})));
   f.appendChild(h('div',{class:'row',style:'align-items:flex-start'},h('div',{},h('p',{class:'eyebrow muted',text:WDL[d.getDay()]+', '+d.getDate()+' de '+MES[d.getMonth()]}),
-    h('h1',{class:'mt8'},saudacao()+',',h('br'),'Ana Luisa.'))));
+    h('h1',{class:'mt8'},saudacao()+',',h('br'),(REAL()&&nuvem.nome?nuvem.nome.split(' ')[0]:'Ana Luisa')+'.'))));
   var hero=h('div',{class:'hero mt16'},archArt(),
     h('div',{class:'inner'},h('span',{class:'eyebrow',text:'Hoje'}),h('p',{class:'big',text:hojeL.length}),h('span',{class:'small',text:hojeL.length===1?'ordem para hoje':'ordens para hoje'})),
     prox?h('span',{class:'pill'},'PRÓXIMA · '+(dateOf(prox)===hj?'':WD[parse(dateOf(prox)).getDay()].toUpperCase()+' '+dateOf(prox).slice(8)+'/'+dateOf(prox).slice(5,7)+' · ')+(prox.hora||'')+' · '+(prox.titulo||'').slice(0,28)):h('span',{class:'pill',text:'SEM ORDENS ABERTAS'}));
@@ -746,9 +749,10 @@ function porDia(itens,desc){
 }
 function contaMidia(it){var v=it.filter(function(x){return x.f.v}).length,n=it.length-v,r=[];if(n)r.push(n+(n===1?' foto':' fotos'));if(v)r.push(v+(v===1?' vídeo':' vídeos'));return r.join(' · ')}
 function fmtDur(s){s=Math.max(0,Math.round(+s||0));return Math.floor(s/60)+':'+pad(s%60)}
-function videoSrc(f){return f&&f.vb?(BURL[f.vb]||''):(f&&f.va?'/_blob/'+f.va:'')}
+function videoSrc(f){return f&&f.vb?(BURL[f.vb]||''):(f&&f.va?(REAL()?nuvem.src(f.va,true):'/_blob/'+f.va):'')}
 function emDe(file){var t=file&&file.lastModified;return (t&&t>9.46e11&&t<=Date.now()+60000)?new Date(t).toISOString():nowIso()}
-function fotoSrc(f){return (f&&f.k&&IMG[f.k])?IMG[f.k]:(f&&f.b?(BURL[f.b]||''):(f&&f.d?f.d:(f&&f.a?'/_blob/'+f.a:'')))}
+function fotoSrc(f){return (f&&f.k&&IMG[f.k])?IMG[f.k]:(f&&f.b?(BURL[f.b]||''):(f&&f.d?f.d:(f&&f.a?(REAL()?nuvem.src(f.a,false):'/_blob/'+f.a):'')))}
+async function fotoSrcP(f){if(REAL()&&f&&f.a&&!(f.k&&IMG[f.k])&&!f.b&&!f.d)return await nuvem.imagem(f.a);return fotoSrc(f)}
 function loadImg(src){return new Promise(function(res,rej){var im=new Image();im.onload=function(){res(im)};im.onerror=function(){rej(new Error('img'))};im.src=src})}
 async function toBlobJpeg(src,max,q){
   var im=await loadImg(src),w=im.naturalWidth,hh=im.naturalHeight,s=Math.min(1,max/Math.max(w,hh));
@@ -760,7 +764,7 @@ function readDataUrl(b){return new Promise(function(r){var fr=new FileReader();f
 function useAssets(){return !!(CAP.assets&&!S.demo)}
 async function storeBlob(blob){if(useAssets()){var r=await CAP.assets.upload(blob,{type:'image/jpeg'});return {a:r.id}}var id=newId('b');if(IDBOK&&await idbPut(id,blob)){BURL[id]=URL.createObjectURL(blob);return {b:id}}return {d:await readDataUrl(blob)}}
 
-var MAX_VIDEO=200*1024*1024;
+var MAX_VIDEO=(REAL()?50:200)*1024*1024;
 function erro(code){var e=new Error(code);e.code=code;return e}
 function videoThumb(url){
   return new Promise(function(res){
@@ -802,7 +806,7 @@ async function addFotos(ctx,files){
       else{var url=URL.createObjectURL(fl);var blob=await toBlobJpeg(url,(useAssets()||IDBOK)?1600:1000,(useAssets()||IDBOK)?0.82:0.7);URL.revokeObjectURL(url);ref=await storeBlob(blob)}
       if(!ctx.obj)throw new Error('gone');ctx.obj.fotos=ctx.obj.fotos||[];
       ctx.obj.fotos.push(Object.assign({id:newId('f'),c:'',s:'',p:false,em:emDe(fl)},ref));if(isV)okv++;else ok++;ctx.save(true);
-    }catch(e){var c=e&&e.code;toast(c==='video_grande'?'Vídeo grande demais (máximo 200 MB). Grave um mais curto.':c==='video_sem_espaco'?'Sem espaço no aparelho para guardar o vídeo.':c==='too_large'?'Arquivo grande demais.':(c==='quota_or_state'?'Armazenamento cheio.':(isV?'Não foi possível enviar o vídeo.':'Não foi possível enviar uma das fotos.')),true)}
+    }catch(e){var c=e&&e.code;toast(c==='video_grande'?'Vídeo grande demais (máximo '+(REAL()?50:200)+' MB). Grave um mais curto.':c==='video_sem_espaco'?'Sem espaço no aparelho para guardar o vídeo.':c==='too_large'?'Arquivo grande demais.':(c==='quota_or_state'?'Armazenamento cheio.':(isV?'Não foi possível enviar o vídeo.':'Não foi possível enviar uma das fotos.')),true)}
   }
   S.uploading=null;
   var msg=[];if(ok)msg.push(ok===1?'1 foto adicionada':ok+' fotos adicionadas');if(okv)msg.push(okv===1?'1 vídeo adicionado':okv+' vídeos adicionados');
@@ -881,7 +885,7 @@ function abrirFoto(ctx,fid){
 /* anotação sobre a foto */
 async function anotar(ctx,fid){
   var o=ctx.obj,f=(o.fotos||[]).filter(function(x){return x.id===fid})[0];if(!f)return;
-  var im;try{im=await loadImg(fotoSrc(f))}catch(e){toast('Não foi possível abrir a foto.',true);return}
+  var im;try{im=await loadImg(await fotoSrcP(f))}catch(e){toast('Não foi possível abrir a foto.',true);return}
   var sc=Math.min(1,1400/Math.max(im.naturalWidth,im.naturalHeight)),cv=h('canvas',{class:'ann'});cv.width=Math.round(im.naturalWidth*sc);cv.height=Math.round(im.naturalHeight*sc);
   var cx=cv.getContext('2d'),shapes=[],cur=null,tool='pen',color='#d93025',pendingText=null,lw=Math.max(3,cv.width/230),fs=Math.round(cv.width/26);
   function draw(sh){
@@ -932,7 +936,7 @@ function viewRelatorio(){
   f.appendChild(h('button',{class:'primary mt16',type:'button',onclick:function(){gerarPdf(id)}},icon('file',18),'Baixar PDF'));
   return f;
 }
-async function imgForPdf(f,mx){var im=await loadImg(fotoSrc(f)),s=Math.min(1,(mx||1400)/Math.max(im.naturalWidth,im.naturalHeight));var c=document.createElement('canvas');c.width=Math.round(im.naturalWidth*s);c.height=Math.round(im.naturalHeight*s);var x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(im,0,0,c.width,c.height);return {u:c.toDataURL('image/jpeg',0.82),w:c.width,h:c.height}}
+async function imgForPdf(f,mx){var im=await loadImg(await fotoSrcP(f)),s=Math.min(1,(mx||1400)/Math.max(im.naturalWidth,im.naturalHeight));var c=document.createElement('canvas');c.width=Math.round(im.naturalWidth*s);c.height=Math.round(im.naturalHeight*s);var x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(im,0,0,c.width,c.height);return {u:c.toDataURL('image/jpeg',0.82),w:c.width,h:c.height}}
 async function entregarArquivo(nome,blob,tipo){
   if(CAP.downloads){await CAP.downloads.save({filename:nome,data:blob});return}
   var file=null;try{file=new File([blob],nome,{type:tipo||'application/pdf'})}catch(e){}
@@ -1296,8 +1300,18 @@ function viewEscritorio(){
   f.appendChild(h('div',{class:'sectionhead'},h('h2',{text:'Listas prontas'})));
   var li=h('div',{class:'card'});Object.keys(TEMPL).filter(function(k){return TEMPL[k].length}).forEach(function(k){li.appendChild(h('div',{class:'row',style:'padding:7px 0;border-bottom:1px solid var(--line)'},h('span',{class:'small',text:TIPOS[k]}),h('span',{class:'small muted',text:TEMPL[k].length+' itens'})))});
   f.appendChild(li);f.appendChild(h('p',{class:'micro muted mt8',text:'Cada tipo de ordem nasce com a lista do tipo. Você ajusta os itens em cada ordem.'}));
+  if(!REAL()){
   f.appendChild(h('div',{class:'sectionhead'},h('h2',{text:'Sobre esta demonstração'})));
   f.appendChild(h('div',{class:'note'},h('span',{text:'Os nomes dos projetos vêm do portfólio público do escritório. As imagens são ilustrações de exemplo. Clientes, datas, horários, listas e honorários são fictícios, só para mostrar como o caderno funciona no dia a dia.'})));
+  }
+  if(REAL()){
+    f.appendChild(h('div',{class:'sectionhead'},h('h2',{text:'Conta'})));
+    var ct=h('div',{class:'card'});
+    ct.appendChild(h('p',{class:'small',text:(nuvem.nome?nuvem.nome+' · ':'')+nuvem.email}));
+    ct.appendChild(h('p',{class:'micro muted mt8',text:nuvem.papel==='editor'?'Acesso para ver e editar.':'Acesso somente para ver.'}));
+    ct.appendChild(h('button',{class:'secondary mt16',type:'button',onclick:function(){nuvem.sair()},text:'Sair deste aparelho'}));
+    f.appendChild(ct);
+  }
   if(S.demo){
     f.appendChild(h('div',{class:'sectionhead'},h('h2',{text:'Backup dos dados'})));
     var bk=h('div',{class:'card'}),fin=h('input',{type:'file',style:'display:none','aria-label':'Escolher arquivo de backup',onchange:function(){var fl=fin.files&&fin.files[0];fin.value='';if(fl)restaurarBackup(fl)}});
@@ -1309,9 +1323,10 @@ function viewEscritorio(){
   }
   f.appendChild(h('div',{class:'sectionhead'},h('h2',{text:'Créditos e licenças'})));
   var cr=h('div',{class:'card'});
-  [['Demonstração','Criada por Pedro Peretti.'],['Imagens de exemplo','Ilustrações genéricas criadas para esta demonstração. Nenhuma foto do escritório está incluída.'],
+  [[REAL()?'Aplicativo':'Demonstração','Criado por Pedro Peretti.']].concat(REAL()?[]:[['Imagens de exemplo','Ilustrações genéricas criadas para esta demonstração. Nenhuma foto do escritório está incluída.']]).concat([
    ['Inspiração visual','Conceito de app Elune, da New Minds (newminds.studio/elune-app). Nenhum arquivo, texto ou imagem deles foi copiado.'],
-   ['Tipografia','Manrope e Newsreader, licença SIL Open Font License 1.1.'],['Geração de PDF','jsPDF, licença MIT.'],['Versão','v1 · funciona sem internet depois da primeira abertura.']].forEach(function(c,i){
+   ['Tipografia','Manrope e Newsreader, licença SIL Open Font License 1.1.'],['Geração de PDF','jsPDF, licença MIT.'],['Versão',REAL()?'v2 · os dados ficam salvos no servidor do escritório; é preciso internet para entrar e sincronizar.':'v1 · funciona sem internet depois da primeira abertura.']])
+  .forEach(function(c,i){
     cr.appendChild(h('div',{style:'padding:9px 0;'+(i?'border-top:1px solid var(--line)':'')},h('p',{class:'eyebrow muted',text:c[0]}),h('p',{class:'small',style:'margin-top:4px',text:c[1]})))});
   f.appendChild(cr);
   if(S.demo){f.appendChild(h('button',{class:'secondary mt16',type:'button',onclick:function(){try{localStorage.removeItem(LS)}catch(e){}idbClear();Object.keys(BURL).forEach(function(k){delete BURL[k]});loadSeed();S.dia=hoje();render();toast('Demonstração restaurada')},text:'Restaurar dados de exemplo'}))}
@@ -1336,6 +1351,7 @@ function render(){
 async function boot(){
   fromHash();setSync('load');render();
   await idbLoad();
+  if(REAL()){try{await nuvem.iniciar()}catch(e){setSync('err','Sem conexão com o servidor');toast('Não foi possível iniciar o login. Recarregue a página.',true);return}}
   var r=await Promise.all([cap('db'),cap('assets'),cap('downloads'),cap('user')]);
   CAP.db=r[0];CAP.assets=r[1];CAP.downloads=r[2];CAP.user=r[3];
   if(CAP.user&&typeof CAP.user.can==='function'){try{var c=await CAP.user.can('data.write');if(c===false)S.ro=true}catch(e){}}
